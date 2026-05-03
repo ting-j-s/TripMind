@@ -12,7 +12,7 @@ from flask import Blueprint, request, jsonify
 
 from backend.data import get_loader
 from backend.models.diary import Diary
-from backend.core import top_k
+from backend.core import top_k, HashTable
 from backend.algorithms import TextSearchIndex, simple_text_search, HuffmanCoding
 
 diary_bp = Blueprint('diary', __name__)
@@ -20,6 +20,59 @@ diary_bp = Blueprint('diary', __name__)
 # 搜索索引缓存
 _search_index = None
 _search_index_dirty = True  # 初始为脏，需要重建
+
+# 标题索引缓存（HashTable）
+_title_index = None
+_title_index_dirty = True  # 初始为脏，需要重建
+
+
+def normalize_title(title):
+    """
+    归一化标题用于精确查询
+    - 转小写
+    - 去除首尾空格
+    """
+    if not title:
+        return ''
+    return title.lower().strip()
+
+
+def build_title_index():
+    """构建标题索引（使用 HashTable）"""
+    global _title_index, _title_index_dirty
+
+    loader = get_loader()
+    diaries = loader.get_all_diaries()
+
+    index = HashTable(size=100)
+    for diary in diaries:
+        key = normalize_title(diary.title)
+        if key:
+            existing = index.get(key, [])
+            if isinstance(existing, list):
+                existing.append(diary.id)
+                index.put(key, existing)
+            else:
+                index.put(key, [diary.id])
+
+    _title_index = index
+    _title_index_dirty = False
+    return index
+
+
+def get_title_index():
+    """获取标题索引（懒加载，脏时重建）"""
+    global _title_index, _title_index_dirty
+
+    if _title_index is None or _title_index_dirty:
+        build_title_index()
+    return _title_index
+
+
+def mark_title_index_dirty():
+    """标记标题索引为脏，需要重建"""
+    global _title_index_dirty
+    _title_index_dirty = True
 
 
 def build_search_index():
@@ -203,7 +256,8 @@ def create_diary():
         diary.compressed_content = compressed
 
     loader.add_diary(diary)
-    mark_search_index_dirty()  # 索引需要重建
+    mark_search_index_dirty()  # 全文搜索索引需要重建
+    mark_title_index_dirty()  # 标题索引需要重建
 
     # 更新用户的已访问景点
     if diary.location_id:
@@ -271,7 +325,8 @@ def update_diary(diary_id):
     if 'videos' in data:
         diary.videos = data['videos']
 
-    mark_search_index_dirty()  # 索引需要重建
+    mark_search_index_dirty()  # 全文搜索索引需要重建
+    mark_title_index_dirty()  # 标题索引需要重建
     loader.save_diaries()
 
     return jsonify({
@@ -296,7 +351,8 @@ def delete_diary(diary_id):
         return jsonify({'code': 403, 'message': '无权限删除', 'data': None})
 
     loader.delete_diary(diary_id)
-    mark_search_index_dirty()  # 索引需要重建
+    mark_search_index_dirty()  # 全文搜索索引需要重建
+    mark_title_index_dirty()  # 标题索引需要重建
 
     return jsonify({
         'code': 200,
@@ -460,34 +516,45 @@ def decompress_diary(diary_id):
 @diary_bp.route('/diaries/title', methods=['GET'])
 def search_by_title():
     """
-    按标题精确搜索日记
+    按标题精确搜索日记（使用 HashTable 索引）
 
     查询参数:
-        title: 标题关键词
+        title: 标题（精确匹配，忽略大小写和首尾空格）
         limit: 返回数量
     """
-    title = request.args.get('title', '').strip()
+    original_query = request.args.get('title', '')
     limit = int(request.args.get('limit', 10))
 
-    if not title:
+    normalized_title = normalize_title(original_query)
+
+    if not normalized_title:
         return jsonify({
-            'code': 200,
+            'code': 400,
             'data': {'items': [], 'total': 0},
-            'message': 'success'
+            'message': 'title参数不能为空'
         })
 
-    loader = get_loader()
-    diaries = loader.get_all_diaries()
+    # 使用 HashTable 精确查询
+    title_index = get_title_index()
+    diary_ids = title_index.get(normalized_title, [])
 
-    # 精确匹配标题（忽略大小写）
-    results = [d for d in diaries if title.lower() in d.title.lower()][:limit]
+    # 获取完整 Diary 对象
+    loader = get_loader()
+    items = []
+    for diary_id in diary_ids:
+        diary = loader.get_diary(diary_id)
+        if diary:
+            items.append(diary.to_dict())
+
+    # 截断到 limit
+    items = items[:limit]
 
     return jsonify({
         'code': 200,
         'data': {
-            'items': [d.to_dict() for d in results],
-            'total': len(results),
-            'query': title
+            'items': items,
+            'total': len(items),
+            'query': original_query
         },
         'message': 'success'
     })

@@ -16,9 +16,10 @@ backend/data/*.json
 node_modules/
 dist/
 
-# IDE
+# IDE / Local settings
 .vscode/
 .idea/
+.claude/
 
 # 系统
 .DS_Store

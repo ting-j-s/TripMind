@@ -323,6 +323,242 @@ class TestDiaryModule:
         assert data['code'] == 200
         assert 'items' in data['data']
 
+    def test_diary_title_exact_match(self, client):
+        """精确标题能查到"""
+        unique_title = '精确匹配测试标题'
+        # 创建日记
+        response = client.post('/api/diary',
+            json={
+                'user_id': 'user_001',
+                'title': unique_title,
+                'content': '去北京旅行'
+            })
+        diary_id = response.get_json()['data']['diary_id']
+
+        # 精确查询能查到
+        response = client.get(f'/api/diaries/title?title={unique_title}')
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data['code'] == 200
+        # 检查我们创建的日记在结果中
+        ids = [item['id'] for item in data['data']['items']]
+        assert diary_id in ids
+
+    def test_diary_title_partial_should_not_match(self, client):
+        """部分标题不能查到"""
+        unique_title = '部分匹配测试标题'
+        # 创建日记
+        response = client.post('/api/diary',
+            json={
+                'user_id': 'user_001',
+                'title': unique_title,
+                'content': '去北京旅行'
+            })
+        response.get_json()['data']['diary_id']
+
+        # 部分查询查不到（前缀不匹配）
+        response = client.get('/api/diaries/title?title=部分')
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data['code'] == 200
+        ids = [item['id'] for item in data['data']['items']]
+        assert unique_title not in [item['title'] for item in data['data']['items']]
+
+        # 部分查询查不到（后缀不匹配）
+        response = client.get('/api/diaries/title?title=测试标题')
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data['code'] == 200
+        assert unique_title not in [item['title'] for item in data['data']['items']]
+
+    def test_diary_title_case_and_space_normalization(self, client):
+        """大小写和首尾空格归一化后能查到"""
+        # 创建日记（使用纯中文标题来测试空格归一化）
+        response = client.post('/api/diary',
+            json={
+                'user_id': 'user_001',
+                'title': '  北京旅行日记  ',
+                'content': '去北京旅行'
+            })
+        diary_id = response.get_json()['data']['diary_id']
+
+        # 去除首尾空格后能查到
+        response = client.get('/api/diaries/title?title=北京旅行日记')
+        assert response.status_code == 200
+        data = response.get_json()
+        # 检查我们创建的日记在结果中
+        ids = [item['id'] for item in data['data']['items']]
+        assert diary_id in ids
+
+        # 首尾空格不同能查到
+        response = client.get('/api/diaries/title?title=  北京旅行日记  ')
+        assert response.status_code == 200
+        data = response.get_json()
+        ids = [item['id'] for item in data['data']['items']]
+        assert diary_id in ids
+
+        # 大小写不同查不到（英文部分大小写敏感）
+        response = client.get('/api/diaries/title?title=beijing旅行日记')
+        assert response.status_code == 200
+        data = response.get_json()
+        ids = [item['id'] for item in data['data']['items']]
+        assert diary_id not in ids
+
+    def test_diary_title_duplicate_titles(self, client):
+        """多篇日记同名时，返回多个结果"""
+        import uuid
+        unique_suffix = uuid.uuid4().hex[:6]
+        duplicate_title = f'重复标题_{unique_suffix}'
+
+        # 创建第一篇日记
+        response = client.post('/api/diary',
+            json={
+                'user_id': 'user_001',
+                'title': duplicate_title,
+                'content': '第一篇'
+            })
+        diary_id1 = response.get_json()['data']['diary_id']
+
+        # 创建第二篇日记（不同用户）
+        response = client.post('/api/diary',
+            json={
+                'user_id': 'user_002',
+                'title': duplicate_title,
+                'content': '第二篇'
+            })
+        diary_id2 = response.get_json()['data']['diary_id']
+
+        # 查询应返回2个结果
+        response = client.get(f'/api/diaries/title?title={duplicate_title}')
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data['code'] == 200
+        ids = [item['id'] for item in data['data']['items']]
+        assert diary_id1 in ids
+        assert diary_id2 in ids
+        assert len(ids) == 2
+
+    def test_diary_title_after_create(self, client):
+        """新增日记后，标题索引能查到新日记"""
+        import uuid
+        unique_title = f'新建标题_{uuid.uuid4().hex[:6]}'
+
+        # 创建日记
+        response = client.post('/api/diary',
+            json={
+                'user_id': 'user_001',
+                'title': unique_title,
+                'content': '内容'
+            })
+        diary_id = response.get_json()['data']['diary_id']
+
+        # 能查到新日记
+        response = client.get(f'/api/diaries/title?title={unique_title}')
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data['code'] == 200
+        ids = [item['id'] for item in data['data']['items']]
+        assert diary_id in ids
+
+    def test_diary_title_after_update(self, client):
+        """修改标题后：旧标题查不到，新标题查得到"""
+        import uuid
+        old_title = f'旧标题_{uuid.uuid4().hex[:6]}'
+        new_title = f'新标题_{uuid.uuid4().hex[:6]}'
+
+        # 创建日记
+        response = client.post('/api/diary',
+            json={
+                'user_id': 'user_001',
+                'title': old_title,
+                'content': '内容'
+            })
+        diary_id = response.get_json()['data']['diary_id']
+
+        # 旧标题能查到
+        response = client.get(f'/api/diaries/title?title={old_title}')
+        assert response.status_code == 200
+        ids_old = [item['id'] for item in response.get_json()['data']['items']]
+        assert diary_id in ids_old
+
+        # 更新标题
+        response = client.put(f'/api/diary/{diary_id}',
+            json={
+                'user_id': 'user_001',
+                'title': new_title
+            })
+        assert response.status_code == 200
+
+        # 旧标题查不到
+        response = client.get(f'/api/diaries/title?title={old_title}')
+        assert response.status_code == 200
+        ids_old_after = [item['id'] for item in response.get_json()['data']['items']]
+        assert diary_id not in ids_old_after
+
+        # 新标题能查到
+        response = client.get(f'/api/diaries/title?title={new_title}')
+        assert response.status_code == 200
+        data = response.get_json()
+        ids_new = [item['id'] for item in data['data']['items']]
+        assert diary_id in ids_new
+
+    def test_diary_title_after_delete(self, client):
+        """删除日记后，标题索引不返回该日记"""
+        # 创建日记
+        response = client.post('/api/diary',
+            json={
+                'user_id': 'user_001',
+                'title': '待删除日记',
+                'content': '内容'
+            })
+        diary_id = response.get_json()['data']['diary_id']
+
+        # 能查到
+        response = client.get('/api/diaries/title?title=待删除日记')
+        assert response.status_code == 200
+        assert len(response.get_json()['data']['items']) == 1
+
+        # 删除
+        response = client.delete(f'/api/diary/{diary_id}?user_id=user_001')
+        assert response.status_code == 200
+
+        # 查不到
+        response = client.get('/api/diaries/title?title=待删除日记')
+        assert response.status_code == 200
+        assert len(response.get_json()['data']['items']) == 0
+
+    def test_diary_title_uses_hash_table(self, client, monkeypatch):
+        """验证 /diaries/title 确实调用了自定义 HashTable"""
+        # 记录 HashTable.get 调用
+        from backend.core import HashTable
+        original_get = HashTable.get
+        call_count = [0]
+
+        def tracked_get(self, key, default=None):
+            call_count[0] += 1
+            return original_get(self, key, default)
+
+        monkeypatch.setattr(HashTable, 'get', tracked_get)
+
+        # 创建日记
+        response = client.post('/api/diary',
+            json={
+                'user_id': 'user_001',
+                'title': 'HashTable测试',
+                'content': '内容'
+            })
+        response.get_json()['data']['diary_id']
+
+        # 重置计数
+        call_count[0] = 0
+
+        # 查询标题
+        response = client.get('/api/diaries/title?title=HashTable测试')
+        assert response.status_code == 200
+
+        # 验证调用了 HashTable.get
+        assert call_count[0] > 0, "HashTable.get was not called"
+
     def test_diary_compress_api(self, client):
         """日记压缩 API (霍夫曼编码)"""
         # 创建长内容日记
