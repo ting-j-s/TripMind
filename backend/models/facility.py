@@ -32,6 +32,7 @@ class Facility(BaseModel):
                  campus_id: str = None,
                  x: float = 0, y: float = 0,
                  floor: int = 0,
+                 location_node_id: str = None,
                  **kwargs):
         super().__init__(id, **kwargs)
         self.name = name
@@ -41,6 +42,7 @@ class Facility(BaseModel):
         self.x = x
         self.y = y
         self.floor = floor
+        self.location_node_id = location_node_id
 
     @classmethod
     def from_dict(cls, data: Dict):
@@ -54,7 +56,8 @@ class Facility(BaseModel):
             campus_id=data.get('campus_id'),
             x=data.get('x', 0),
             y=data.get('y', 0),
-            floor=data.get('floor', 0)
+            floor=data.get('floor', 0),
+            location_node_id=data.get('location_node_id')
         )
 
     @staticmethod

@@ -38,6 +38,7 @@ class Food(BaseModel):
                  heat: int = 0, rating: float = 5.0,
                  price: float = None,
                  image_url: str = None,
+                 location_node_id: str = None,
                  **kwargs):
         super().__init__(id, **kwargs)
         self.name = name
@@ -52,6 +53,7 @@ class Food(BaseModel):
         self.rating = rating
         self.price = price
         self.image_url = image_url
+        self.location_node_id = location_node_id
 
     @classmethod
     def from_dict(cls, data: Dict):
@@ -70,7 +72,8 @@ class Food(BaseModel):
             heat=data.get('heat', 0),
             rating=data.get('rating', 5.0),
             price=data.get('price'),
-            image_url=data.get('image_url')
+            image_url=data.get('image_url'),
+            location_node_id=data.get('location_node_id')
         )
 
     @staticmethod
