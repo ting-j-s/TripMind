@@ -251,7 +251,7 @@ $ python scripts/validate_data.py
 ============================================================
 
 [1] 数据规模检查
-    attractions: 195 (要求 >= 200)
+    attractions: 200 (要求 >= 200)
     buildings: 20 (要求 >= 20)
     facilities: 50 (要求 >= 50)
     foods: 50 (要求 >= 50)

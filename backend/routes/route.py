@@ -389,33 +389,58 @@ def indoor_route():
     请求:
         {
             "building_id": "建筑ID",
-            "from": "起点位置",  // 如 "ENTRANCE_东门" 或 "F3_301"
-            "to": "终点位置",
-            "floor_from": 起始楼层,
-            "floor_to": 目标楼层
+            "start": "起点位置",  // gate/entrance/elevator/room_id/节点ID
+            "end": "终点位置",     // room_id/elevator/节点ID
+            "strategy": "time" 或 "distance"
         }
 
     返回:
-        路径信息
+        {
+            "code": 200,
+            "data": {
+                "success": true,
+                "building_id": "BLD_001",
+                "building_name": "教学楼A",
+                "start": "gate",
+                "end": "room_301",
+                "strategy": "time",
+                "path": ["node1", "node2", ...],
+                "path_nodes": [{node_id, name, floor, type}, ...],
+                "total_distance": 95,
+                "total_time": 82,
+                "algorithm": "Dijkstra on indoor graph"
+            }
+        }
     """
     data = request.get_json()
     building_id = data.get('building_id')
-    from_pos = data.get('from')
-    to_pos = data.get('to')
+    start = data.get('start')
+    end = data.get('end')
+    strategy = data.get('strategy', 'time')
 
-    if not building_id or not from_pos or not to_pos:
-        return jsonify({'code': 400, 'message': '参数不完整', 'data': None})
+    if not building_id:
+        return jsonify({'code': 400, 'message': 'building_id不能为空', 'data': None})
 
-    # 室内导航实现：简化处理，返回提示
-    # 实际实现需要构建室内图结构
+    if not start:
+        return jsonify({'code': 400, 'message': '起点(start)不能为空', 'data': None})
 
-    return jsonify({
-        'code': 200,
-        'data': {
-            'path': [from_pos, to_pos],
-            'distance': 50,
-            'time': 30,
-            'message': '室内导航功能开发中'
-        },
-        'message': 'success'
-    })
+    if not end:
+        return jsonify({'code': 400, 'message': '终点(end)不能为空', 'data': None})
+
+    # 使用室内导航服务
+    from backend.services.indoor_navigation_service import plan_indoor_route
+
+    result = plan_indoor_route(building_id, start, end, strategy)
+
+    if result.get('success'):
+        return jsonify({
+            'code': 200,
+            'data': result,
+            'message': 'success'
+        })
+    else:
+        return jsonify({
+            'code': 404,
+            'data': result,
+            'message': result.get('message', '室内导航失败')
+        })

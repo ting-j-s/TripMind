@@ -1,0 +1,98 @@
+{
+  "buildings": [
+    {
+      "building_id": "BLD_001",
+      "building_name": "教学楼A",
+      "floors": [1, 2, 3],
+      "entrances": ["main_entrance"],
+      "elevators": ["main_elevator"],
+      "nodes": [
+        {"node_id": "BLD_001_F1_entrance", "name": "一层大门", "floor": 1, "type": "entrance", "x": 116.3521, "y": 40.0251},
+        {"node_id": "BLD_001_F1_hall", "name": "一层大厅", "floor": 1, "type": "hall", "x": 116.3522, "y": 40.0252},
+        {"node_id": "BLD_001_F1_elevator", "name": "一层电梯", "floor": 1, "type": "elevator", "x": 116.3523, "y": 40.0253},
+        {"node_id": "BLD_001_F1_corridor", "name": "一层走廊", "floor": 1, "type": "corridor", "x": 116.3524, "y": 40.0254},
+        {"node_id": "BLD_001_F1_room_101", "name": "101教室", "floor": 1, "type": "room", "x": 116.3525, "y": 40.0255},
+        {"node_id": "BLD_001_F1_room_102", "name": "102教室", "floor": 1, "type": "room", "x": 116.3526, "y": 40.0256},
+
+        {"node_id": "BLD_001_F2_hall", "name": "二层大厅", "floor": 2, "type": "hall", "x": 116.3522, "y": 40.0252},
+        {"node_id": "BLD_001_F2_elevator", "name": "二层电梯", "floor": 2, "type": "elevator", "x": 116.3523, "y": 40.0253},
+        {"node_id": "BLD_001_F2_corridor", "name": "二层走廊", "floor": 2, "type": "corridor", "x": 116.3524, "y": 40.0254},
+        {"node_id": "BLD_001_F2_room_201", "name": "201教室", "floor": 2, "type": "room", "x": 116.3525, "y": 40.0255},
+        {"node_id": "BLD_001_F2_room_202", "name": "202教室", "floor": 2, "type": "room", "x": 116.3526, "y": 40.0256},
+
+        {"node_id": "BLD_001_F3_hall", "name": "三层大厅", "floor": 3, "type": "hall", "x": 116.3522, "y": 40.0252},
+        {"node_id": "BLD_001_F3_elevator", "name": "三层电梯", "floor": 3, "type": "elevator", "x": 116.3523, "y": 40.0253},
+        {"node_id": "BLD_001_F3_corridor", "name": "三层走廊", "floor": 3, "type": "corridor", "x": 116.3524, "y": 40.0254},
+        {"node_id": "BLD_001_F3_room_301", "name": "301教室", "floor": 3, "type": "room", "x": 116.3525, "y": 40.0255},
+        {"node_id": "BLD_001_F3_room_302", "name": "302教室", "floor": 3, "type": "room", "x": 116.3526, "y": 40.0256}
+      ],
+      "edges": [
+        {"from": "BLD_001_F1_entrance", "to": "BLD_001_F1_hall", "distance": 15, "time": 12, "type": "corridor"},
+        {"from": "BLD_001_F1_hall", "to": "BLD_001_F1_elevator", "distance": 10, "time": 8, "type": "corridor"},
+        {"from": "BLD_001_F1_hall", "to": "BLD_001_F1_corridor", "distance": 8, "time": 6, "type": "corridor"},
+        {"from": "BLD_001_F1_corridor", "to": "BLD_001_F1_room_101", "distance": 12, "time": 10, "type": "room_access"},
+        {"from": "BLD_001_F1_corridor", "to": "BLD_001_F1_room_102", "distance": 15, "time": 12, "type": "room_access"},
+
+        {"from": "BLD_001_F1_elevator", "to": "BLD_001_F2_elevator", "distance": 0, "time": 15, "type": "elevator"},
+        {"from": "BLD_001_F2_elevator", "to": "BLD_001_F2_hall", "distance": 10, "time": 8, "type": "corridor"},
+        {"from": "BLD_001_F2_hall", "to": "BLD_001_F2_corridor", "distance": 8, "time": 6, "type": "corridor"},
+        {"from": "BLD_001_F2_corridor", "to": "BLD_001_F2_room_201", "distance": 12, "time": 10, "type": "room_access"},
+        {"from": "BLD_001_F2_corridor", "to": "BLD_001_F2_room_202", "distance": 15, "time": 12, "type": "room_access"},
+
+        {"from": "BLD_001_F2_elevator", "to": "BLD_001_F3_elevator", "distance": 0, "time": 15, "type": "elevator"},
+        {"from": "BLD_001_F3_elevator", "to": "BLD_001_F3_hall", "distance": 10, "time": 8, "type": "corridor"},
+        {"from": "BLD_001_F3_hall", "to": "BLD_001_F3_corridor", "distance": 8, "time": 6, "type": "corridor"},
+        {"from": "BLD_001_F3_corridor", "to": "BLD_001_F3_room_301", "distance": 12, "time": 10, "type": "room_access"},
+        {"from": "BLD_001_F3_corridor", "to": "BLD_001_F3_room_302", "distance": 15, "time": 12, "type": "room_access"}
+      ]
+    },
+    {
+      "building_id": "BLD_002",
+      "building_name": "图书馆",
+      "floors": [1, 2, 3],
+      "entrances": ["main_entrance", "side_entrance"],
+      "elevators": ["main_elevator"],
+      "nodes": [
+        {"node_id": "BLD_002_F1_main_entrance", "name": "一层正门", "floor": 1, "type": "entrance", "x": 116.3521, "y": 40.0251},
+        {"node_id": "BLD_002_F1_side_entrance", "name": "一层侧门", "floor": 1, "type": "entrance", "x": 116.3520, "y": 40.0250},
+        {"node_id": "BLD_002_F1_hall", "name": "一层大厅", "floor": 1, "type": "hall", "x": 116.3522, "y": 40.0252},
+        {"node_id": "BLD_002_F1_elevator", "name": "一层电梯", "floor": 1, "type": "elevator", "x": 116.3523, "y": 40.0253},
+        {"node_id": "BLD_002_F1_corridor", "name": "一层走廊", "floor": 1, "type": "corridor", "x": 116.3524, "y": 40.0254},
+        {"node_id": "BLD_002_F1_room_reading", "name": "一层阅览室", "floor": 1, "type": "room", "x": 116.3525, "y": 40.0255},
+        {"node_id": "BLD_002_F1_room_reference", "name": "一层参考书库", "floor": 1, "type": "room", "x": 116.3526, "y": 40.0256},
+
+        {"node_id": "BLD_002_F2_hall", "name": "二层大厅", "floor": 2, "type": "hall", "x": 116.3522, "y": 40.0252},
+        {"node_id": "BLD_002_F2_elevator", "name": "二层电梯", "floor": 2, "type": "elevator", "x": 116.3523, "y": 40.0253},
+        {"node_id": "BLD_002_F2_corridor", "name": "二层走廊", "floor": 2, "type": "corridor", "x": 116.3524, "y": 40.0254},
+        {"node_id": "BLD_002_F2_room_periodicals", "name": "二层期刊室", "floor": 2, "type": "room", "x": 116.3525, "y": 40.0255},
+        {"node_id": "BLD_002_F2_room_digital", "name": "二层数字资源区", "floor": 2, "type": "room", "x": 116.3526, "y": 40.0256},
+
+        {"node_id": "BLD_002_F3_hall", "name": "三层大厅", "floor": 3, "type": "hall", "x": 116.3522, "y": 40.0252},
+        {"node_id": "BLD_002_F3_elevator", "name": "三层电梯", "floor": 3, "type": "elevator", "x": 116.3523, "y": 40.0253},
+        {"node_id": "BLD_002_F3_corridor", "name": "三层走廊", "floor": 3, "type": "corridor", "x": 116.3524, "y": 40.0254},
+        {"node_id": "BLD_002_F3_room_stacks", "name": "三层书库", "floor": 3, "type": "room", "x": 116.3525, "y": 40.0255},
+        {"node_id": "BLD_002_F3_room_study", "name": "三层自习室", "floor": 3, "type": "room", "x": 116.3526, "y": 40.0256}
+      ],
+      "edges": [
+        {"from": "BLD_002_F1_main_entrance", "to": "BLD_002_F1_hall", "distance": 20, "time": 15, "type": "corridor"},
+        {"from": "BLD_002_F1_side_entrance", "to": "BLD_002_F1_hall", "distance": 12, "time": 10, "type": "corridor"},
+        {"from": "BLD_002_F1_hall", "to": "BLD_002_F1_elevator", "distance": 10, "time": 8, "type": "corridor"},
+        {"from": "BLD_002_F1_hall", "to": "BLD_002_F1_corridor", "distance": 8, "time": 6, "type": "corridor"},
+        {"from": "BLD_002_F1_corridor", "to": "BLD_002_F1_room_reading", "distance": 15, "time": 12, "type": "room_access"},
+        {"from": "BLD_002_F1_corridor", "to": "BLD_002_F1_room_reference", "distance": 18, "time": 14, "type": "room_access"},
+
+        {"from": "BLD_002_F1_elevator", "to": "BLD_002_F2_elevator", "distance": 0, "time": 15, "type": "elevator"},
+        {"from": "BLD_002_F2_elevator", "to": "BLD_002_F2_hall", "distance": 10, "time": 8, "type": "corridor"},
+        {"from": "BLD_002_F2_hall", "to": "BLD_002_F2_corridor", "distance": 8, "time": 6, "type": "corridor"},
+        {"from": "BLD_002_F2_corridor", "to": "BLD_002_F2_room_periodicals", "distance": 15, "time": 12, "type": "room_access"},
+        {"from": "BLD_002_F2_corridor", "to": "BLD_002_F2_room_digital", "distance": 18, "time": 14, "type": "room_access"},
+
+        {"from": "BLD_002_F2_elevator", "to": "BLD_002_F3_elevator", "distance": 0, "time": 15, "type": "elevator"},
+        {"from": "BLD_002_F3_elevator", "to": "BLD_002_F3_hall", "distance": 10, "time": 8, "type": "corridor"},
+        {"from": "BLD_002_F3_hall", "to": "BLD_002_F3_corridor", "distance": 8, "time": 6, "type": "corridor"},
+        {"from": "BLD_002_F3_corridor", "to": "BLD_002_F3_room_stacks", "distance": 15, "time": 12, "type": "room_access"},
+        {"from": "BLD_002_F3_corridor", "to": "BLD_002_F3_room_study", "distance": 18, "time": 14, "type": "room_access"}
+      ]
+    }
+  ]
+}
