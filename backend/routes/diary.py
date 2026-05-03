@@ -17,21 +17,45 @@ from backend.algorithms import TextSearchIndex, simple_text_search, HuffmanCodin
 
 diary_bp = Blueprint('diary', __name__)
 
+# 搜索索引缓存
+_search_index = None
+_search_index_dirty = True  # 初始为脏，需要重建
+
 
 def build_search_index():
-    """构建日记搜索索引"""
+    """构建日记搜索索引（使用倒排索引）"""
+    global _search_index, _search_index_dirty
+
     loader = get_loader()
     diaries = loader.get_all_diaries()
 
     index = TextSearchIndex()
     for diary in diaries:
+        # 索引标题+内容，便于全文搜索
         index.add_document(
             diary.id,
             diary.title + ' ' + diary.content,
             {'title': diary.title, 'user_id': diary.user_id}
         )
 
+    _search_index = index
+    _search_index_dirty = False
     return index
+
+
+def get_search_index():
+    """获取搜索索引（懒加载，脏时重建）"""
+    global _search_index, _search_index_dirty
+
+    if _search_index is None or _search_index_dirty:
+        build_search_index()
+    return _search_index
+
+
+def mark_search_index_dirty():
+    """标记搜索索引为脏，需要重建"""
+    global _search_index_dirty
+    _search_index_dirty = True
 
 
 @diary_bp.route('/diaries', methods=['GET'])
@@ -85,7 +109,7 @@ def get_diaries():
 @diary_bp.route('/diaries/search', methods=['GET'])
 def search_diaries():
     """
-    搜索日记（全文搜索）
+    搜索日记（全文搜索 - 倒排索引）
 
     查询参数:
         q: 搜索关键词
@@ -101,21 +125,17 @@ def search_diaries():
             'message': 'success'
         })
 
+    # 使用倒排索引搜索
+    index = get_search_index()
+    results = index.search(query, limit)
+
+    # 获取日记完整对象
     loader = get_loader()
-    diaries = loader.get_all_diaries()
-
-    # 简单文本搜索
-    results = simple_text_search(
-        [{'id': d.id, 'content': d.title + ' ' + d.content, 'diary': d} for d in diaries],
-        query,
-        content_field='content',
-        limit=limit
-    )
-
     items = []
     for r in results:
-        diary = r['diary']
-        items.append(diary.to_dict())
+        diary = loader.get_diary(r['doc_id'])
+        if diary:
+            items.append(diary.to_dict())
 
     return jsonify({
         'code': 200,
@@ -183,6 +203,7 @@ def create_diary():
         diary.compressed_content = compressed
 
     loader.add_diary(diary)
+    mark_search_index_dirty()  # 索引需要重建
 
     # 更新用户的已访问景点
     if diary.location_id:
@@ -250,6 +271,7 @@ def update_diary(diary_id):
     if 'videos' in data:
         diary.videos = data['videos']
 
+    mark_search_index_dirty()  # 索引需要重建
     loader.save_diaries()
 
     return jsonify({
@@ -274,6 +296,7 @@ def delete_diary(diary_id):
         return jsonify({'code': 403, 'message': '无权限删除', 'data': None})
 
     loader.delete_diary(diary_id)
+    mark_search_index_dirty()  # 索引需要重建
 
     return jsonify({
         'code': 200,
