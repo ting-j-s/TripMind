@@ -165,6 +165,7 @@ class HuffmanCoding:
         压缩文本（返回字节串，便于存储）
 
         将二进制字符串转换为字节数组
+        第一个字节保存padding长度（补0的位数），这样解压时可以正确去除
 
         返回:
             (压缩后的字节数据, 编码表)
@@ -174,12 +175,19 @@ class HuffmanCoding:
 
         encoded, _ = self.encode(text)
 
-        # 将二进制字符串转换为字节
+        # 计算padding：编码的bit数不是8的倍数时需要补0
+        bit_len = len(encoded)
+        padding = (8 - bit_len % 8) % 8  # 0到7的padding
+
+        # 末尾补padding个0
+        encoded_padded = encoded + '0' * padding
+
+        # 将二进制字符串转换为字节（第一个字节是padding长度）
         byte_data = bytearray()
-        for i in range(0, len(encoded), 8):
-            byte = encoded[i:i+8]
-            if len(byte) < 8:
-                byte = byte.ljust(8, '0')
+        byte_data.append(padding)  # 第一个字节保存padding长度
+
+        for i in range(0, len(encoded_padded), 8):
+            byte = encoded_padded[i:i+8]
             byte_data.append(int(byte, 2))
 
         return bytes(byte_data), self._code_table.copy()
@@ -189,7 +197,7 @@ class HuffmanCoding:
         解压文本
 
         参数:
-            compressed: 压缩后的字节数据
+            compressed: 压缩后的字节数据（第一个字节是padding长度）
             code_table: 编码表
 
         返回:
@@ -198,10 +206,19 @@ class HuffmanCoding:
         if not compressed:
             return ''
 
-        # 将字节转换为二进制字符串
+        # 第一个字节是padding长度
+        padding = compressed[0] if len(compressed) > 0 else 0
+        if padding < 0 or padding > 7:
+            padding = 0  # 安全检查
+
+        # 将剩余字节转换为二进制字符串
         encoded = ''
-        for byte in compressed:
-            encoded += format(byte, '08b')
+        for i in range(1, len(compressed)):
+            encoded += format(compressed[i], '08b')
+
+        # 去除末尾的padding位
+        if padding > 0 and len(encoded) >= padding:
+            encoded = encoded[:-padding]
 
         return self.decode(encoded, code_table)
 
