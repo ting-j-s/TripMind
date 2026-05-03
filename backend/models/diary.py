@@ -33,6 +33,7 @@ class Diary(BaseModel):
                  view_count: int = 0,
                  ratings: List[float] = None,
                  compressed_content: bytes = None,
+                 compression_code_table: Dict = None,
                  **kwargs):
         super().__init__(id, **kwargs)
         self.user_id = user_id
@@ -45,6 +46,7 @@ class Diary(BaseModel):
         self.view_count = view_count
         self.ratings = ratings or []
         self.compressed_content = compressed_content
+        self.compression_code_table = compression_code_table or {}
 
     @classmethod
     def from_dict(cls, data: Dict):
@@ -60,7 +62,9 @@ class Diary(BaseModel):
             location_id=data.get('location_id'),
             create_time=data.get('create_time'),
             view_count=data.get('view_count', 0),
-            ratings=data.get('ratings', [])
+            ratings=data.get('ratings', []),
+            compressed_content=data.get('compressed_content'),
+            compression_code_table=data.get('compression_code_table', {})
         )
 
     def to_dict(self) -> Dict:

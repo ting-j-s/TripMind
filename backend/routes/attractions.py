@@ -40,10 +40,10 @@ def get_attractions():
 
     # 排序
     if sort_by == 'rating':
-        attractions = top_k(attractions, len(attractions),
+        attractions = top_k(attractions, limit,
                            key=lambda x: x.rating, reverse=True)
     else:  # 默认按热度
-        attractions = top_k(attractions, len(attractions),
+        attractions = top_k(attractions, limit,
                            key=lambda x: x.heat, reverse=True)
 
     # 分页
@@ -153,15 +153,15 @@ def recommend():
                     unmatched.append(a)
 
             # 匹配的兴趣景点排前面，按热度排序
-            matched = top_k(matched, len(matched), key=lambda x: x.heat, reverse=True)
-            unmatched = top_k(unmatched, len(unmatched), key=lambda x: x.heat, reverse=True)
+            matched = top_k(matched, limit, key=lambda x: x.heat, reverse=True)
+            unmatched = top_k(unmatched, limit, key=lambda x: x.heat, reverse=True)
 
             attractions = matched + unmatched
         else:
-            attractions = top_k(attractions, len(attractions), key=lambda x: x.heat, reverse=True)
+            attractions = top_k(attractions, limit, key=lambda x: x.heat, reverse=True)
     else:
         # 无用户，按热度推荐
-        attractions = top_k(attractions, len(attractions), key=lambda x: x.heat, reverse=True)
+        attractions = top_k(attractions, limit, key=lambda x: x.heat, reverse=True)
 
     return jsonify({
         'code': 200,

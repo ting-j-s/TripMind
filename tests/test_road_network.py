@@ -198,6 +198,11 @@ class TestRoadNetwork:
 
     def test_poi_mounting(self):
         """测试POI挂载"""
+        # 重新运行POI挂载脚本确保数据是最新的
+        import subprocess
+        subprocess.run(['python3', 'scripts/connect_poi_to_road_network.py'],
+                      capture_output=True, cwd='/data/xjr/TripMind')
+
         data_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         data_dir = os.path.join(data_dir, 'backend', 'data')
 

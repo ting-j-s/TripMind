@@ -200,9 +200,9 @@ def get_foods():
 
         foods = sorted(foods, key=lambda x: x.distance if hasattr(x, 'distance') and x.distance is not None else float('inf'))
     elif sort_by == 'rating':
-        foods = top_k(foods, len(foods), key=lambda x: x.rating, reverse=True)
+        foods = top_k(foods, limit, key=lambda x: x.rating, reverse=True)
     else:  # 默认按热度
-        foods = top_k(foods, len(foods), key=lambda x: x.heat, reverse=True)
+        foods = top_k(foods, limit, key=lambda x: x.heat, reverse=True)
 
     total = len(foods)
     foods = foods[offset:offset + limit]
@@ -251,7 +251,7 @@ def search_foods():
 
     if not query:
         # 无搜索词，返回按热度排序的结果
-        items = top_k(items, len(items), key=lambda x: x.get('heat', 0), reverse=True)
+        items = top_k(items, limit, key=lambda x: x.get('heat', 0), reverse=True)
         return jsonify({
             'code': 200,
             'data': {
@@ -311,14 +311,14 @@ def recommend_foods():
                     others.append(f)
 
             # 推荐排前面，按热度排序
-            recommended = top_k(recommended, len(recommended), key=lambda x: x.heat, reverse=True)
-            others = top_k(others, len(others), key=lambda x: x.heat, reverse=True)
+            recommended = top_k(recommended, limit, key=lambda x: x.heat, reverse=True)
+            others = top_k(others, limit, key=lambda x: x.heat, reverse=True)
 
             foods = recommended + others
         else:
-            foods = top_k(foods, len(foods), key=lambda x: x.heat, reverse=True)
+            foods = top_k(foods, limit, key=lambda x: x.heat, reverse=True)
     else:
-        foods = top_k(foods, len(foods), key=lambda x: x.heat, reverse=True)
+        foods = top_k(foods, limit, key=lambda x: x.heat, reverse=True)
 
     return jsonify({
         'code': 200,

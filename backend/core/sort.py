@@ -3,7 +3,7 @@
 这些是课程要求的"核心算法"，必须自己实现
 """
 
-from .heap import MaxHeap
+from .heap import MaxHeap, HeapElement
 
 
 # ============================================================
@@ -165,28 +165,28 @@ def top_k(arr, k, key=None, reverse=True):
         heap = MaxHeap()
         for item in arr:
             if len(heap) < k:
-                heap.push(item)
+                heap.push(HeapElement(item, key(item)))
             else:
                 # 如果当前元素比堆顶大，则替换
-                if key(item) > key(heap.peek()):
+                if key(item) > key(heap.peek().value):
                     heap.pop()
-                    heap.push(item)
+                    heap.push(HeapElement(item, key(item)))
     else:
         # 找最小的K个 -> 用最小堆
         from .heap import MinHeap
         heap = MinHeap()
         for item in arr:
             if len(heap) < k:
-                heap.push(item)
+                heap.push(HeapElement(item, key(item)))
             else:
-                if key(item) < key(heap.peek()):
+                if key(item) < key(heap.peek().value):
                     heap.pop()
-                    heap.push(item)
+                    heap.push(HeapElement(item, key(item)))
 
     # 堆中就是前K个，但顺序是乱的，需要排序
     result = []
     while not heap.is_empty():
-        result.append(heap.pop())
+        result.append(heap.pop().value)
 
     # 排序
     result = heap_sort(result, key, reverse)

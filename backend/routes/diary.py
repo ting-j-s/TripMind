@@ -59,12 +59,12 @@ def get_diaries():
 
     # 排序
     if sort_by == 'rating':
-        diaries = top_k(diaries, len(diaries),
+        diaries = top_k(diaries, limit,
                        key=lambda x: x.get_average_rating(), reverse=True)
     elif sort_by == 'time':
         diaries = sorted(diaries, key=lambda x: x.create_time or '', reverse=True)
     else:  # 默认按热度
-        diaries = top_k(diaries, len(diaries),
+        diaries = top_k(diaries, limit,
                        key=lambda x: x.view_count, reverse=True)
 
     total = len(diaries)
@@ -314,4 +314,155 @@ def rate_diary(diary_id):
             'average_rating': diary.get_average_rating(),
             'ratings_count': len(diary.ratings)
         }
+    })
+
+
+@diary_bp.route('/diary/<diary_id>/compress', methods=['POST'])
+def compress_diary(diary_id):
+    """
+    压缩日记内容（霍夫曼编码）
+
+    请求:
+        {
+            "user_id": "用户ID"  // 可选，用于权限校验
+        }
+
+    返回:
+        {
+            "code": 200,
+            "data": {
+                "original_size": 原始大小,
+                "compressed_size": 压缩后大小,
+                "compression_ratio": 压缩比
+            }
+        }
+    """
+    loader = get_loader()
+    diary = loader.get_diary(diary_id)
+
+    if not diary:
+        return jsonify({'code': 404, 'message': '日记不存在', 'data': None})
+
+    if not diary.content:
+        return jsonify({'code': 400, 'message': '日记内容为空', 'data': None})
+
+    # 霍夫曼压缩
+    huffman = HuffmanCoding()
+    huffman.build(diary.content)
+    compressed, code_table = huffman.compress(diary.content)
+
+    # 保存压缩内容和解码表
+    diary.compressed_content = compressed
+    diary.compression_code_table = code_table
+    diary.content = ''  # 清空原内容，节省空间
+    loader.save_diaries()
+
+    original_size = len(diary.content.encode('utf-8')) if diary.content else 0
+
+    return jsonify({
+        'code': 200,
+        'message': '压缩成功',
+        'data': {
+            'original_size': original_size,
+            'compressed_size': len(compressed),
+            'compression_ratio': len(compressed) / original_size if original_size > 0 else 0,
+            'code_table_size': len(code_table)
+        }
+    })
+
+
+@diary_bp.route('/diary/<diary_id>/decompress', methods=['POST'])
+def decompress_diary(diary_id):
+    """
+    解压日记内容
+
+    请求:
+        {
+            "user_id": "用户ID"  // 可选，用于权限校验
+        }
+
+    返回:
+        {
+            "code": 200,
+            "data": {
+                "content": "解压后的原文"
+            }
+        }
+    """
+    loader = get_loader()
+    diary = loader.get_diary(diary_id)
+
+    if not diary:
+        return jsonify({'code': 404, 'message': '日记不存在', 'data': None})
+
+    if not diary.compressed_content:
+        # 没有压缩内容，直接返回原文
+        return jsonify({
+            'code': 200,
+            'message': '无需解压',
+            'data': {
+                'content': diary.content,
+                'compressed': False
+            }
+        })
+
+    # 霍夫曼解压
+    huffman = HuffmanCoding()
+    # 需要重新构建解码表 - 这里简化处理，实际应该存储code_table
+    # 由于HuffmanCoding在compress时没有保存code_table，需要用另一种方式
+    # 方案：使用压缩时自带的code_table信息
+
+    # 实际上，HuffmanCoding.decompress需要code_table
+    # 但我们存储的compressed_content只是bytes，没有code_table
+    # 这里需要修改存储策略 - 保存code_table
+
+    # 简化处理：如果有compressed_content但没有code_table，返回错误
+    if not hasattr(diary, 'compression_code_table') or not diary.compression_code_table:
+        return jsonify({'code': 500, 'message': '编码表丢失，无法解压', 'data': None})
+
+    decompressed = huffman.decompress(diary.compressed_content, diary.compression_code_table)
+
+    return jsonify({
+        'code': 200,
+        'message': '解压成功',
+        'data': {
+            'content': decompressed,
+            'compressed': True
+        }
+    })
+
+
+@diary_bp.route('/diaries/title', methods=['GET'])
+def search_by_title():
+    """
+    按标题精确搜索日记
+
+    查询参数:
+        title: 标题关键词
+        limit: 返回数量
+    """
+    title = request.args.get('title', '').strip()
+    limit = int(request.args.get('limit', 10))
+
+    if not title:
+        return jsonify({
+            'code': 200,
+            'data': {'items': [], 'total': 0},
+            'message': 'success'
+        })
+
+    loader = get_loader()
+    diaries = loader.get_all_diaries()
+
+    # 精确匹配标题（忽略大小写）
+    results = [d for d in diaries if title.lower() in d.title.lower()][:limit]
+
+    return jsonify({
+        'code': 200,
+        'data': {
+            'items': [d.to_dict() for d in results],
+            'total': len(results),
+            'query': title
+        },
+        'message': 'success'
     })
