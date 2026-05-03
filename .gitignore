@@ -4,6 +4,10 @@ __pycache__/
 *.pyo
 .pytest_cache/
 *.egg-info/
+*.log
+.env
+.venv/
+venv/
 
 # 不排除 data 目录下的 json 文件
 backend/data/*.json
@@ -27,3 +31,6 @@ convert_to_pdf.py
 
 # 课程PDF（不上传但本地保留）
 *.pdf
+
+# 归档目录
+archive/

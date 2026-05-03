@@ -22,8 +22,8 @@ def check_data_scale():
     print("\n[1] 数据规模检查")
     print("-" * 40)
 
-    loader = get_loader()
-    stats = loader.get_stats()
+    data_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    data_dir = os.path.join(data_dir, 'backend', 'data')
 
     requirements = {
         'attractions': 200,
@@ -35,8 +35,26 @@ def check_data_scale():
     }
 
     all_pass = True
-    for key, req_count in requirements.items():
-        actual = stats.get(key, 0)
+
+    # 直接读取JSON文件获取准确数量
+    for filename, req_count in [
+        ('attractions.json', requirements['attractions']),
+        ('buildings.json', requirements['buildings']),
+        ('facilities.json', requirements['facilities']),
+        ('foods.json', requirements['foods']),
+        ('diaries.json', requirements['diaries']),
+        ('users.json', requirements['users'])
+    ]:
+        filepath = os.path.join(data_dir, filename)
+        if os.path.exists(filepath):
+            with open(filepath, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                key = filename.replace('.json', '')
+                items = data.get(key, data.get(key + 's', []))
+                actual = len(items)
+        else:
+            actual = 0
+
         status = "✓" if actual >= req_count else "✗"
         if actual < req_count:
             all_pass = False
