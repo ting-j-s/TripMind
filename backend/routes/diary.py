@@ -346,18 +346,20 @@ def compress_diary(diary_id):
     if not diary.content:
         return jsonify({'code': 400, 'message': '日记内容为空', 'data': None})
 
+    # 保存原文用于压缩和计算原始大小（在清空content之前）
+    original_content = diary.content
+    original_size = len(original_content.encode('utf-8'))
+
     # 霍夫曼压缩
     huffman = HuffmanCoding()
-    huffman.build(diary.content)
-    compressed, code_table = huffman.compress(diary.content)
+    huffman.build(original_content)
+    compressed, code_table = huffman.compress(original_content)
 
     # 保存压缩内容和解码表
     diary.compressed_content = compressed
     diary.compression_code_table = code_table
     diary.content = ''  # 清空原内容，节省空间
     loader.save_diaries()
-
-    original_size = len(diary.content.encode('utf-8')) if diary.content else 0
 
     return jsonify({
         'code': 200,

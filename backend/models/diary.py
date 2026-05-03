@@ -2,6 +2,7 @@
 旅游日记模型
 """
 
+import base64
 from typing import List, Dict
 from .base import BaseModel
 
@@ -21,7 +22,9 @@ class Diary(BaseModel):
         create_time: 创建时间
         view_count: 浏览量（热度）
         ratings: 评分列表
-        compressed_content: 压缩后的内容（bytes）
+        compressed_content: 压缩后的内容（bytes，JSON存储时转为base64字符串）
+        compression_code_table: 霍夫曼编码表（dict）
+        is_compressed: 是否已压缩
     """
 
     def __init__(self, id: str, user_id: str, title: str,
@@ -34,6 +37,7 @@ class Diary(BaseModel):
                  ratings: List[float] = None,
                  compressed_content: bytes = None,
                  compression_code_table: Dict = None,
+                 is_compressed: bool = False,
                  **kwargs):
         super().__init__(id, **kwargs)
         self.user_id = user_id
@@ -47,11 +51,22 @@ class Diary(BaseModel):
         self.ratings = ratings or []
         self.compressed_content = compressed_content
         self.compression_code_table = compression_code_table or {}
+        self.is_compressed = is_compressed
 
     @classmethod
     def from_dict(cls, data: Dict):
         if not data:
             return None
+
+        compressed_content = data.get('compressed_content')
+        if compressed_content:
+            # 从base64字符串还原bytes
+            if isinstance(compressed_content, str):
+                compressed_content = base64.b64decode(compressed_content)
+        elif data.get('is_compressed') and data.get('content'):
+            # 如果标记为已压缩但content为空，说明compressed_content丢失
+            compressed_content = None
+
         return cls(
             id=data.get('id', ''),
             user_id=data.get('user_id', ''),
@@ -63,15 +78,20 @@ class Diary(BaseModel):
             create_time=data.get('create_time'),
             view_count=data.get('view_count', 0),
             ratings=data.get('ratings', []),
-            compressed_content=data.get('compressed_content'),
-            compression_code_table=data.get('compression_code_table', {})
+            compressed_content=compressed_content,
+            compression_code_table=data.get('compression_code_table', {}),
+            is_compressed=data.get('is_compressed', False)
         )
 
     def to_dict(self) -> Dict:
         result = super().to_dict()
-        # 移除压缩内容（不必要字段）
-        if 'compressed_content' in result:
-            del result['compressed_content']
+
+        # 转换压缩内容为base64字符串以便JSON存储
+        if self.compressed_content:
+            result['compressed_content'] = base64.b64encode(self.compressed_content).decode('ascii')
+            result['compression_code_table'] = self.compression_code_table
+            result['is_compressed'] = True
+
         return result
 
     def increment_view(self):

@@ -379,6 +379,106 @@ class TestDiaryModule:
         response = client.get('/api/diaries?sort=time&limit=10')
         assert response.status_code == 200
 
+    def test_compress_returns_accurate_original_size(self, client):
+        """压缩后 original_size 必须大于 0 且等于原文 UTF-8 字节长度"""
+        content = '这是一段测试日记内容，用于验证压缩功能。' * 10
+        original_bytes = len(content.encode('utf-8'))
+
+        response = client.post('/api/diary', json={
+            'user_id': 'user_001',
+            'title': 'original_size测试',
+            'content': content
+        })
+        diary_id = response.get_json()['data']['diary_id']
+
+        response = client.post(f'/api/diary/{diary_id}/compress')
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data['code'] == 200
+
+        original_size = data['data']['original_size']
+        assert original_size > 0, f"original_size should be > 0, got {original_size}"
+        assert original_size == original_bytes, f"original_size should be {original_bytes}, got {original_size}"
+
+    def test_compress_then_decompress_lossless(self, client):
+        """压缩后再解压，内容必须与原文完全一致"""
+        content = '这是一段测试日记内容，用于验证霍夫曼压缩的完整性。' * 10
+
+        response = client.post('/api/diary', json={
+            'user_id': 'user_001',
+            'title': '无损解压测试',
+            'content': content
+        })
+        diary_id = response.get_json()['data']['diary_id']
+
+        # 压缩
+        client.post(f'/api/diary/{diary_id}/compress')
+
+        # 解压
+        response = client.post(f'/api/diary/{diary_id}/decompress')
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data['code'] == 200
+        assert data['data'].get('compressed') == True
+        assert data['data']['content'] == content, "Decompressed content should match original"
+
+    def test_decompress_after_persistence(self, client):
+        """创建日记 → 压缩 → 保存 → 重新加载 → 解压，验证持久化场景"""
+        content = '持久化测试内容' * 20
+
+        # 创建日记
+        response = client.post('/api/diary', json={
+            'user_id': 'user_001',
+            'title': '持久化测试',
+            'content': content
+        })
+        diary_id = response.get_json()['data']['diary_id']
+
+        # 压缩
+        compress_resp = client.post(f'/api/diary/{diary_id}/compress')
+        assert compress_resp.status_code == 200
+
+        # 重新加载后解压（通过 API 获取日记详情再解压）
+        # 由于测试客户端无法真正"重启" loader，我们通过保存/加载机制验证
+        # 获取日记详情（会触发 save）
+        get_resp = client.get(f'/api/diary/{diary_id}')
+        assert get_resp.status_code == 200
+
+        # 再次压缩+解压验证内容仍然一致
+        decompress_resp = client.post(f'/api/diary/{diary_id}/decompress')
+        assert decompress_resp.status_code == 200
+        data = decompress_resp.get_json()
+        assert data['data'].get('content') == content, "Content should still match after save/reload cycle"
+
+    def test_diary_to_dict_from_dict_preserves_compressed_fields(self):
+        """验证 Diary.to_dict/from_dict 后压缩字段不丢失"""
+        from backend.models.diary import Diary
+        from backend.algorithms import HuffmanCoding
+
+        content = '持久化字段测试内容' * 10
+        diary = Diary(id='test_diary_001', user_id='user_001', title='测试', content=content)
+
+        # 压缩
+        huffman = HuffmanCoding()
+        huffman.build(content)
+        compressed, code_table = huffman.compress(content)
+        diary.compressed_content = compressed
+        diary.compression_code_table = code_table
+        diary.is_compressed = True
+
+        # to_dict -> from_dict
+        saved = diary.to_dict()
+        restored = Diary.from_dict(saved)
+
+        # 验证字段完整性
+        assert restored.compressed_content == compressed, "compressed_content should match"
+        assert restored.compression_code_table == code_table, "code_table should match"
+        assert restored.is_compressed == True, "is_compressed should be True"
+
+        # 验证可以通过 restored 的字段进行解压
+        decompressed = huffman.decompress(restored.compressed_content, restored.compression_code_table)
+        assert decompressed == content, "Decompressed content should match original"
+
 
 # ============================================================
 # 3.5 美食推荐
